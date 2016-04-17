@@ -1,0 +1,35 @@
+<beans 
+  xmlns="http://www.springframework.org/schema/beans"
+  xmlns:amq="http://activemq.apache.org/schema/core"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+  http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+	<!-- Allows us to use system properties as variables in this configuration file -->
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" />
+
+	<broker useJmx="true" xmlns="http://activemq.apache.org/schema/core">
+
+		<!-- The transport connectors ActiveMQ will listen to -->
+		<transportConnectors>
+            <!-- DOS protection, limit concurrent connections to 1000 and frame size to 100MB -->
+            <transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="stomp" uri="stomp://0.0.0.0:61613?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="mqtt" uri="mqtt+nio://0.0.0.0:1883?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+        </transportConnectors>
+
+		<plugins>
+			<bean xmlns="http://www.springframework.org/schema/beans" id="isolationPlugin" class="org.apache.activemq.isolation.IsolationPlugin">
+				<property name="allowedIPAddresses">
+					<list>
+						<value>127.0.0.1</value>
+					</list>
+				</property>
+			</bean>
+		</plugins>
+	</broker>
+
+
+
+</beans>
