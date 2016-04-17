@@ -21,9 +21,9 @@
 
 		<plugins>
 			<bean xmlns="http://www.springframework.org/schema/beans" id="isolationPlugin" class="org.apache.activemq.isolation.IsolationPlugin">
-				<property name="allowedIPAddresses">
+				<property name="messagesToInspect">
 					<list>
-						<value>127.0.0.1</value>
+						<value>addUser</value>
 					</list>
 				</property>
 			</bean>
