@@ -37,6 +37,9 @@ public class IsolationBroker extends BrokerFilter {
 	}	
 
 	public void send(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException {
+		String messageId = messageSend.getMessageId().toString();
+		String correlationId = messageSend.getCorrelationId();
+
 		byte[] data = messageSend.getContent().data;
 		String content = new String(data, 0, data.length, "ASCII");
 

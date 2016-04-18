@@ -12,8 +12,12 @@ public class LockProvider {
         this.locks = new HashMap<String, Lock>();
     }
 
+    public synchronized boolean obtainLocks() {
+        return false;
+    }
+
     // Returns true when lock is successfully obtained
-    public synchronized boolean obtainLock(String messageId, String correlationId, String messageName, HashMap<String, String> keys) {
+    private synchronized boolean obtainLock(String messageId, String correlationId, String messageName, HashMap<String, String> keys) {
         String key = messageName + ":" + "";
 
         Lock currentLock = locks.get(key);
@@ -24,10 +28,12 @@ public class LockProvider {
             return true;
         } else {
             // A lock is already held on this key; check if it's the same correlation ID
+            if (currentLock.compareCorrelationId(messageId, correlationId)) {
+                currentLock.addMessage(messageId, correlationId);
+            }
 
+            return false;
         }
-
-        return false;
     }
 
     public synchronized void releaseLock(String messageId, String correlationId) {
