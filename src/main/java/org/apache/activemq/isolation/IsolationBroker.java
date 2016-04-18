@@ -18,10 +18,13 @@ import org.apache.activemq.broker.Broker;
 import org.apache.activemq.broker.BrokerFilter;
 import org.apache.activemq.broker.ProducerBrokerExchange;
 import org.apache.activemq.broker.ConnectionContext;
+import org.apache.activemq.broker.region.MessageReference;
+import org.apache.activemq.broker.ConsumerBrokerExchange;
+import org.apache.activemq.util.ByteSequence;
+import org.apache.activemq.command.MessageId;
+import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.ConnectionInfo;
 import org.apache.activemq.command.Message;
-import org.apache.activemq.broker.region.MessageReference;
-import org.apache.activemq.util.ByteSequence;
 
 public class IsolationBroker extends BrokerFilter {
 
@@ -35,6 +38,11 @@ public class IsolationBroker extends BrokerFilter {
 	public void addConnection(ConnectionContext context, ConnectionInfo info) throws Exception {
 		super.addConnection(context, info);
 	}	
+
+	public void acknowledge(ConsumerBrokerExchange consumerExchange, MessageAck ack) throws Exception {
+		System.out.println("Acknoweldge!!");
+		super.acknowledge(consumerExchange, ack);
+	}
 
 	public void send(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException {
 		byte[] data = messageSend.getContent().data;
