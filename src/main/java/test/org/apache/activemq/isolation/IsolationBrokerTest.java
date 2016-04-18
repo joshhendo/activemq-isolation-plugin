@@ -1,6 +1,5 @@
 package test.org.apache.activemq.isolation;
 
-import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
 import org.apache.activemq.broker.ProducerBrokerExchange;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageId;
@@ -14,14 +13,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import sun.nio.cs.StandardCharsets;
 
 import static java.nio.charset.StandardCharsets.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 import static org.junit.Assert.*;
 
