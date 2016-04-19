@@ -4,13 +4,16 @@ import java.util.List;
 
 import org.apache.activemq.broker.Broker;
 import org.apache.activemq.broker.BrokerPlugin;
+import org.apache.activemq.isolation.lock.LockProvider;
 
 public class IsolationPlugin implements BrokerPlugin {
-	
+
+	LockProvider lockProvider;
 	List<String> messagesToInspect;
 
 	public Broker installPlugin(Broker broker) throws Exception {
-		return new IsolationBroker(broker, messagesToInspect);
+		this.lockProvider = new LockProvider();
+		return new IsolationBroker(broker, lockProvider, messagesToInspect);
 	}
 
 	public List<String> getMessagesToInspect() {

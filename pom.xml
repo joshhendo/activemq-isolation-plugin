@@ -20,21 +20,22 @@
     <commons-logging-version>1.1</commons-logging-version>
     <commons-pool-version>1.4</commons-pool-version>
     <geronimo-spec-version>1.1</geronimo-spec-version>
-    <junit-version>4.4</junit-version>
+    <junit-version>4.12</junit-version>
     <log4j-version>1.2.14</log4j-version>
     <springframework-version>2.5.6</springframework-version>
     <stax-version>1.0.1</stax-version>
     <woodstox-version>3.2.7</woodstox-version>
     <xbean-version>3.4.3</xbean-version>
+    <mockito-version>1.10.19</mockito-version>
   </properties>
 
   <dependencies>
-    <!--<dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>${junit-version}</version>
-      <scope>test</scope>
-    </dependency>-->
+      <!--<scope>test</scope>-->
+    </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-core</artifactId>
@@ -49,6 +50,11 @@
           <artifactId>camel-core</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+    	<groupId>org.mockito</groupId>
+    	<artifactId>mockito-all</artifactId>
+    	<version>${mockito-version}</version>
     </dependency>
     <!--<dependency>
       <groupId>org.apache.geronimo.specs</groupId>
