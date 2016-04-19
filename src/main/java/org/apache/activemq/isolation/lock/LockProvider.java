@@ -5,69 +5,124 @@ import org.apache.activemq.isolation.interfaces.ILockProvider;
 import java.util.*;
 
 public class LockProvider implements ILockProvider {
+
+    private HashMap<String, String> messageIdToCorrelationId;
+    private HashMap<String, CorrelationIdLocks> correlationIdToLocks;
     private HashMap<String, Lock> locks;
 
     public LockProvider() throws Exception {
+        this.messageIdToCorrelationId = new HashMap<String, String>();
+        this.correlationIdToLocks = new HashMap<String, CorrelationIdLocks>();
+
         this.locks = new HashMap<String, Lock>();
     }
 
     public synchronized boolean obtainLocksForMessage(String messageId, String correlationId, String messageName, HashMap<String, String> keys) {
-        List<ObtainLockResult> obtainedLocks = new ArrayList<ObtainLockResult>();
+        assert(messageId != null);
+        if (correlationId == null) {
+            correlationId = messageId;
+        }
+
+        // Map message to correlation ID
+        messageIdToCorrelationId.put(messageId, correlationId);
+
+        // Get existing locks for correlation ID
+        CorrelationIdLocks correlationIdLockEntry = this.correlationIdToLocks.get(correlationId);
+        if (correlationIdLockEntry == null) {
+            correlationIdLockEntry = new CorrelationIdLocks(correlationId);
+            this.correlationIdToLocks.put(correlationId, correlationIdLockEntry);
+        }
+
+        Set<Lock> obtainedLocks = new HashSet<Lock>();
         boolean success = true;
 
-        // Iterate over the locks we need to obtain
+        // Iterate and obtain NEW locks
         for (Map.Entry<String, String> entry : keys.entrySet()) {
-            ObtainLockResult obtainLockResult = obtainLock(messageId, correlationId, messageName, entry);
+            String lockId = messageName + ":" + entry.getKey() + ":" + entry.getValue();
 
-            if (!obtainLockResult.getObtained()) {
-                success = false;
-                break;
+            // Only attempt to get a lock if it's not already held
+            if (!correlationIdLockEntry.hasLock(lockId)) {
+                Lock obtainedLock = obtainLock(lockId);
+
+                if (obtainedLock == null) {
+                    success = false;
+                    break;
+                }
+
+                obtainedLocks.add(obtainedLock);
+                correlationIdLockEntry.addLock(obtainedLock);
             }
-
-            obtainedLocks.add(obtainLockResult);
         }
 
         // If unsuccessful, we need to release all the ones that were newly obtained
-        // AND remove the new message from ones with the semaphore incremented
         if (!success) {
-            for (ObtainLockResult obtainLockResult : obtainedLocks) {
-                releaseLock(messageId, correlationId, obtainLockResult.getKeyName());
+            for (Lock lock : obtainedLocks) {
+                this.locks.remove(lock.getLockId());
+                correlationIdLockEntry.removeLock(lock);
             }
 
             return false;
         }
 
+        correlationIdLockEntry.addMessage(messageId);
         return true;
     }
 
-    public synchronized boolean releaseLocksForMessage(String messageId, String correlationId, String messageName) {
-        return false;
-    }
+    public synchronized boolean releaseLocksForMessage(String messageId) {
+        String correlationId = messageIdToCorrelationId.get(messageId);
 
-    // Returns true when lock is successfully obtained
-    private synchronized ObtainLockResult obtainLock(String messageId, String correlationId, String messageName, Map.Entry<String, String> key) {
-        String keyName = messageName + ":" + key.getKey() + ":" + key.getValue();
-
-        Lock currentLock = locks.get(keyName);
-        if (currentLock == null) {
-            currentLock = new Lock(messageName);
-            currentLock.addMessage(messageId, correlationId);
-            locks.put(keyName, currentLock);
-
-            return new ObtainLockResult(keyName, true, false);
-
-        } else if (currentLock.compareCorrelationId(messageId, correlationId)) {
-            currentLock.addMessage(messageId, correlationId);
-            return new ObtainLockResult(keyName, true, true);
+        if (correlationId == null) {
+            // TODO: Throw excepton
+            return false;
         }
 
-        return new ObtainLockResult(keyName, false, false);
+        CorrelationIdLocks correlationIdLockEntry = correlationIdToLocks.get(correlationId);
+        if (correlationIdLockEntry == null) {
+            // TODO: Throw exception
+            return false;
+        }
+
+        correlationIdLockEntry.acknoweldgeMessage(messageId);
+
+        if (correlationIdLockEntry.areLocksReleased()) {
+            releaseLocksForCorrelationId(correlationIdLockEntry);
+        }
+
+        return true;
     }
 
-    private synchronized void releaseLock(String messageId, String correlationId, String keyName) {
-        Lock currentLock = locks.get(keyName);
-        if (currentLock != null) {
-            currentLock.ackMessage(messageId, correlationId);
+    // Returns lock object when lock is successfully obtained, otherwise null
+    private synchronized Lock obtainLock(String lockId) {
+        if (!this.locks.containsKey(lockId)) {
+            Lock newLock = new Lock(lockId);
+
+            // Attempt to obtain the lock
+            locks.put(lockId, newLock);
+
+            // Optimistic concurrency, check that it wasn't another process
+            // that added the lock
+            if (locks.get(lockId) == newLock) {
+                return newLock;
+            }
         }
+
+        return null;
+    }
+
+    private synchronized void releaseLocksForCorrelationId(CorrelationIdLocks correlationIdLockEntry) {
+        assert(correlationIdLockEntry != null);
+
+        // Free all locks
+        for (Lock lock : correlationIdLockEntry.getLocks()) {
+            this.locks.remove(lock);
+        }
+
+        // Remove maps between Message ID and correlation ID
+        for (String messageId : correlationIdLockEntry.getMessages()) {
+            this.messageIdToCorrelationId.remove(messageId);
+        }
+
+        // Remove correlation Id entry
+        this.correlationIdToLocks.remove(correlationIdLockEntry);
     }
 }

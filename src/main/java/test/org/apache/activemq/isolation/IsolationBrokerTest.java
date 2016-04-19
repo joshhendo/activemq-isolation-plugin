@@ -25,7 +25,7 @@ public class IsolationBrokerTest {
     private IsolationBroker isolationBroker;
 
     @Rule
-    private final ExpectedException exception = ExpectedException.none();
+    public final ExpectedException exception = ExpectedException.none();
 
     @Before
     public void setUp() throws Exception {
