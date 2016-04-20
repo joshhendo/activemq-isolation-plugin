@@ -1,11 +1,13 @@
 package test.org.apache.activemq.isolation;
 
+import org.apache.activemq.broker.ConsumerBrokerExchange;
 import org.apache.activemq.broker.ProducerBrokerExchange;
 import org.apache.activemq.command.Message;
+import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.isolation.IsolationBroker;
 
-import org.apache.activemq.isolation.exception.NoLockException;
+import org.apache.activemq.isolation.exceptions.NoLockException;
 import org.apache.activemq.isolation.lock.LockProvider;
 import org.apache.activemq.util.ByteSequence;
 import org.junit.After;
@@ -18,8 +20,6 @@ import static java.nio.charset.StandardCharsets.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
-
-import static org.junit.Assert.*;
 
 public class IsolationBrokerTest {
     private IsolationBroker isolationBroker;
@@ -40,7 +40,7 @@ public class IsolationBrokerTest {
     private Message generateMockMessage() {
         String messageIdString = java.util.UUID.randomUUID().toString();
         String correlationIdString = java.util.UUID.randomUUID().toString();
-        String messageContent = "This is my message";
+        String messageContent = "{\"message\": \"addUser\", \"userid\": \"12345678\"}";
         byte[] messageContentBytes = messageContent.getBytes(US_ASCII);
 
         MessageId mockedMessageId = new MessageId(messageIdString);
@@ -80,8 +80,30 @@ public class IsolationBrokerTest {
         // This should be fine
         this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage1);
 
-        // Different correlation ID, expect it to throw an exception
+        // Different correlation ID, expect it to throw an exceptions
         exception.expect(NoLockException.class);
+        this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage2);
+    }
+
+    @Test
+    public void EnsureLockCanBeReAquiredAfterRelease() throws Exception {
+        ProducerBrokerExchange mockedProducerBrokerExchange = mock(ProducerBrokerExchange.class);
+        ConsumerBrokerExchange mockedConsumerBrokerExchange = mock(ConsumerBrokerExchange.class);
+
+        Message mockMessage1 = generateMockMessage();
+        MessageId mockMessageId1 = mockMessage1.getMessageId();
+        MessageAck mockMessageAck1 = mock(MessageAck.class);
+        when(mockMessageAck1.getFirstMessageId()).thenReturn(mockMessageId1);
+
+        Message mockMessage2 = generateMockMessage();
+        MessageId mockMessageId2 = mockMessage2.getMessageId();
+        MessageAck mockMessageAck2 = mock(MessageAck.class);
+        when(mockMessageAck2.getFirstMessageId()).thenReturn(mockMessageId2);
+
+        this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage1);
+        this.isolationBroker.processAcknowledge(mockedConsumerBrokerExchange, mockMessageAck1);
+
+        // This should NOT throw an exceptions
         this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage2);
     }
 

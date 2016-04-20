@@ -1,4 +1,4 @@
-package org.apache.activemq.isolation.exception;
+package org.apache.activemq.isolation.exceptions;
 
 public class NoLockException extends Exception {
 	public NoLockException() {}

@@ -78,11 +78,12 @@ public class LockProvider implements ILockProvider {
 
         CorrelationIdLocks correlationIdLockEntry = correlationIdToLocks.get(correlationId);
         if (correlationIdLockEntry == null) {
-            // TODO: Throw exception
+            // TODO: Throw exceptions
             return false;
         }
 
         correlationIdLockEntry.acknoweldgeMessage(messageId);
+        this.messageIdToCorrelationId.remove(messageId);
 
         if (correlationIdLockEntry.areLocksReleased()) {
             releaseLocksForCorrelationId(correlationIdLockEntry);
@@ -114,12 +115,7 @@ public class LockProvider implements ILockProvider {
 
         // Free all locks
         for (Lock lock : correlationIdLockEntry.getLocks()) {
-            this.locks.remove(lock);
-        }
-
-        // Remove maps between Message ID and correlation ID
-        for (String messageId : correlationIdLockEntry.getMessages()) {
-            this.messageIdToCorrelationId.remove(messageId);
+            this.locks.remove(lock.getLockId());
         }
 
         // Remove correlation Id entry

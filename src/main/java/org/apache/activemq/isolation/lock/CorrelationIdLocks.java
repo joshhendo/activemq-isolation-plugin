@@ -62,7 +62,7 @@ public class CorrelationIdLocks {
         assert(messageId != null);
 
         if (areLocksReleased()) {
-            // TODO: Throw exception
+            // TODO: Throw exceptions
             return;
         }
 
@@ -76,7 +76,7 @@ public class CorrelationIdLocks {
         assert(messageId != null);
 
         if (!messages.contains(messageId)) {
-            // TODO: Throw exception
+            // TODO: Throw exceptions
             return;
         }
 
