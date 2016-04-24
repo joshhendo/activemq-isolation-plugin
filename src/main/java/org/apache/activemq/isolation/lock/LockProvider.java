@@ -3,18 +3,19 @@ package org.apache.activemq.isolation.lock;
 import org.apache.activemq.isolation.interfaces.ILockProvider;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LockProvider implements ILockProvider {
 
-    private HashMap<String, String> messageIdToCorrelationId;
-    private HashMap<String, CorrelationIdLocks> correlationIdToLocks;
-    private HashMap<String, Lock> locks;
+    private ConcurrentHashMap<String, String> messageIdToCorrelationId;
+    private ConcurrentHashMap<String, CorrelationIdLocks> correlationIdToLocks;
+    private ConcurrentHashMap<String, Lock> locks;
 
     public LockProvider() throws Exception {
-        this.messageIdToCorrelationId = new HashMap<String, String>();
-        this.correlationIdToLocks = new HashMap<String, CorrelationIdLocks>();
+        this.messageIdToCorrelationId = new ConcurrentHashMap<String, String>();
+        this.correlationIdToLocks = new ConcurrentHashMap<String, CorrelationIdLocks>();
 
-        this.locks = new HashMap<String, Lock>();
+        this.locks = new ConcurrentHashMap<String, Lock>();
     }
 
     public synchronized boolean obtainLocksForMessage(String messageId, String correlationId, String messageName, HashMap<String, String> keys) {
