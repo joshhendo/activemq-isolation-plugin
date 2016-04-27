@@ -10,3 +10,5 @@ buildNumber.properties
 src/main/resources/org/apache/activemq/isolation/activemq-data/localhost/KahaDB/lock
 *.data
 *.redo
+.idea/*
+*.iml
