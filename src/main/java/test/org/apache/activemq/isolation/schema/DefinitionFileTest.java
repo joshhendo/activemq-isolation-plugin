@@ -14,11 +14,6 @@ import java.util.Arrays;
 public class DefinitionFileTest {
     @Test
     public void read() throws Exception {
-        Path filePath = Paths.get("./assets/definition.json");
-        String input = StringUtils.join(Files.readAllLines(filePath), "\n");
-
-        Gson gson = new Gson();
-        SchemaFile schemaFile = gson.fromJson(input, SchemaFile.class);
-
+        SchemaFile schemaFile = SchemaFile.readFile("./assets/definition.json");
     }
 }
