@@ -1,8 +1,8 @@
 package test.org.apache.activemq.isolation.schema;
 
 import com.google.gson.Gson;
-import com.sun.deploy.util.StringUtils;
 import org.apache.activemq.isolation.schema.SchemaFile;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
