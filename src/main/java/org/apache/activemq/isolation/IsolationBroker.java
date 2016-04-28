@@ -9,6 +9,8 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.isolation.exceptions.NoLockException;
 import org.apache.activemq.isolation.interfaces.ILockProvider;
 import org.apache.activemq.isolation.schema.SchemaFile;
+import org.apache.commons.lang3.builder.RecursiveToStringStyle;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.json.*;
 
 import java.io.IOException;
@@ -21,7 +23,7 @@ public class IsolationBroker extends BrokerFilter {
 	ILockProvider lockProvider;
 	SchemaFile definitions;
 
-	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) {
+	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) throws IOException {
 		super(next);
 		this.lockProvider = lockProvider;
 		this.definitions = readInDefinitionFile(definitionFile);
@@ -49,6 +51,8 @@ public class IsolationBroker extends BrokerFilter {
 
         byte[] data = messageSend.getContent().data;
 		String content = new String(data, 0, data.length, "ASCII").trim();
+		int i = content.indexOf("{");
+		content = content.substring(i);
 
 		// Try and parse JSON
 		JSONObject jsonObject = new JSONObject(content);
@@ -66,6 +70,7 @@ public class IsolationBroker extends BrokerFilter {
 		}
 
 		// Try and obtain lock
+		System.out.println("Obtaining lock with messageId=" + messageId + " and correlationId=" + correlationId);
 		boolean lockObtained = this.lockProvider.obtainLocksForMessage(messageId, correlationId, messageName, keys);
 		if (!lockObtained) {
 			throw new NoLockException();
@@ -73,8 +78,9 @@ public class IsolationBroker extends BrokerFilter {
 	}
 
 	public void processAcknowledge(ConsumerBrokerExchange consumerExchange, MessageAck ack) throws Exception {
-		this.lockProvider.releaseLocksForMessage(ack.getFirstMessageId().toString());
-		System.out.println("ack");
+        String messageId = ack.getLastMessageId().toString();
+		System.out.println("Ack message with messageId=" + messageId);
+		// System.out.println(ReflectionToStringBuilder.toString(ack, new RecursiveToStringStyle()));
+		this.lockProvider.releaseLocksForMessage(messageId);
 	}
-
 }

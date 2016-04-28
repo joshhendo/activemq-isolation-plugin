@@ -29,7 +29,7 @@ public class IsolationBrokerTest {
 
     @Before
     public void setUp() throws Exception {
-        this.isolationBroker = new IsolationBroker(null, new LockProvider(), new ArrayList<String>());
+        this.isolationBroker = new IsolationBroker(null, new LockProvider(), "./assets/definition.json");
     }
 
     @After
@@ -93,12 +93,12 @@ public class IsolationBrokerTest {
         Message mockMessage1 = generateMockMessage();
         MessageId mockMessageId1 = mockMessage1.getMessageId();
         MessageAck mockMessageAck1 = mock(MessageAck.class);
-        when(mockMessageAck1.getFirstMessageId()).thenReturn(mockMessageId1);
+        when(mockMessageAck1.getLastMessageId()).thenReturn(mockMessageId1);
 
         Message mockMessage2 = generateMockMessage();
         MessageId mockMessageId2 = mockMessage2.getMessageId();
         MessageAck mockMessageAck2 = mock(MessageAck.class);
-        when(mockMessageAck2.getFirstMessageId()).thenReturn(mockMessageId2);
+        when(mockMessageAck2.getLastMessageId()).thenReturn(mockMessageId2);
 
         this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage1);
         this.isolationBroker.processAcknowledge(mockedConsumerBrokerExchange, mockMessageAck1);
@@ -106,5 +106,4 @@ public class IsolationBrokerTest {
         // This should NOT throw an exceptions
         this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage2);
     }
-
 }

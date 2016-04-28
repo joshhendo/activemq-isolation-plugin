@@ -12,6 +12,8 @@ public class IsolationPlugin implements BrokerPlugin {
 	String definitionFile;
 
 	public Broker installPlugin(Broker broker) throws Exception {
+		System.out.println("Got a definition file of " + definitionFile);
+
 		this.lockProvider = new LockProvider();
 		return new IsolationBroker(broker, lockProvider, definitionFile);
 	}
@@ -20,7 +22,7 @@ public class IsolationPlugin implements BrokerPlugin {
 		return definitionFile;
 	}
 
-	public void setDefinitionFileString (String definitionFile) {
+	public void setDefinitionFile(String definitionFile) {
 		this.definitionFile = definitionFile;
 	}
 }
