@@ -8,8 +8,10 @@ import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.isolation.exceptions.NoLockException;
 import org.apache.activemq.isolation.interfaces.ILockProvider;
+import org.apache.activemq.isolation.schema.SchemaFile;
 import org.json.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,12 +19,16 @@ import java.util.List;
 public class IsolationBroker extends BrokerFilter {
 
 	ILockProvider lockProvider;
-	List<String> messagesToInspect;
-	
-	public IsolationBroker(Broker next, ILockProvider lockProvider, List<String> messagesToInspect) {
+	SchemaFile definitions;
+
+	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) {
 		super(next);
 		this.lockProvider = lockProvider;
-		this.messagesToInspect = messagesToInspect;
+		this.definitions = readInDefinitionFile(definitionFile);
+	}
+
+	private SchemaFile readInDefinitionFile(String definitionFile) throws IOException {
+		return SchemaFile.readFile(definitionFile);
 	}
 
 	@Override
