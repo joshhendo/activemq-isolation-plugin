@@ -1,0 +1,29 @@
+{
+  "definitions":
+  [
+    {
+      "type": "AddUser",
+      "keys": [
+        "username"
+      ],
+      "locks": [
+        {
+          "type": "horizontal",
+          "key": "username"
+        }
+      ]
+    },
+    {
+      "type": "UpdateUser",
+      "keys": [
+        "username"
+      ],
+      "locks": [
+        {
+          "type": "combination",
+          "key": "username"
+        }
+      ]
+    }
+  ]
+}

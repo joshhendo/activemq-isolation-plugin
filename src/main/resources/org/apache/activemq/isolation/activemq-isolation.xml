@@ -14,22 +14,17 @@
 		<transportConnectors>
             <!-- DOS protection, limit concurrent connections to 1000 and frame size to 100MB -->
             <transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
-            <transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+	    	<transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
             <transportConnector name="stomp" uri="stomp://0.0.0.0:61613?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
-            <transportConnector name="mqtt" uri="mqtt+nio://0.0.0.0:1883?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+	    	<transportConnector name="mqtt" uri="mqtt+nio://0.0.0.0:1883?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
         </transportConnectors>
 
 		<plugins>
 			<bean xmlns="http://www.springframework.org/schema/beans" id="isolationPlugin" class="org.apache.activemq.isolation.IsolationPlugin">
-				<property name="messagesToInspect">
-					<list>
-						<value>addUser</value>
-					</list>
+				<property name="definitionFile">
+					<value>./activemq-isolation-plugin/assets/definition.json</value>
 				</property>
 			</bean>
 		</plugins>
 	</broker>
-
-
-
 </beans>

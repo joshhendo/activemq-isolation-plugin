@@ -1,7 +1,5 @@
 package org.apache.activemq.isolation.lock;
 
-import com.sun.xml.internal.xsom.impl.scd.Iterators;
-
 import java.util.*;
 
 public class CorrelationIdLocks {
