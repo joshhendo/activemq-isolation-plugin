@@ -113,7 +113,7 @@ public class LockProvider implements ILockProvider {
             if (lastVirtualQueueEntry != null) {
                 // If it isn't for this message ID, then we can't obtain the lock.
                 // If it is for this message ID, then we can remove it from the queue.
-                if (lastVirtualQueueEntry.getLockId().equals(messageId)) {
+                if (lastVirtualQueueEntry.getMessageId().equals(messageId)) {
                     this.virtualQueue.remove(lastVirtualQueueEntry);
                 } else {
                     return null;
@@ -154,8 +154,8 @@ public class LockProvider implements ILockProvider {
         Object[] virtualQueueArray = this.virtualQueue.toArray();
 
         VirtualQueueEntry lastVirtualQueueEntry = null;
-        for (Object virtualQueueEntryObj : virtualQueueArray) {
-            VirtualQueueEntry virtualQueueEntry = (VirtualQueueEntry) virtualQueueEntryObj;
+        for (int i = virtualQueueArray.length-1; i >= 0; i--) {
+            VirtualQueueEntry virtualQueueEntry = (VirtualQueueEntry) virtualQueueArray[i];
 
             if (virtualQueueEntry.isCoarseLock() && virtualQueueEntry.getMessageType().equals(messageType)) {
                 lastVirtualQueueEntry = virtualQueueEntry;

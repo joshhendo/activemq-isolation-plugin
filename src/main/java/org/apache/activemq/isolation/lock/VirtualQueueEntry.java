@@ -6,9 +6,14 @@ public class VirtualQueueEntry {
     private String messageType;
     private String keyName;
     private String keyValue;
+    private String messageId;
     private Date created;
 
     public VirtualQueueEntry(String messageType, String keyName, String keyValue, String messageId) {
+        this.messageType = messageType;
+        this.keyName = keyName;
+        this.keyValue = keyValue;
+        this.messageId = messageId;
         this.created = new Date();
     }
 
@@ -38,6 +43,10 @@ public class VirtualQueueEntry {
             return true;
         }
         return false;
+    }
+
+    public String getMessageId () {
+        return this.messageId;
     }
 
     public boolean matches(String messageType, String keyName, String keyValue) {

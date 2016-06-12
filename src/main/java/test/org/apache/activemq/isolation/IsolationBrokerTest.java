@@ -53,6 +53,12 @@ public class IsolationBrokerTest {
         return mockedMessage;
     }
 
+    private MessageAck generateMockMessageAck(MessageId messageId) {
+        MessageAck mockMessageAck = mock(MessageAck.class);
+        when(mockMessageAck.getLastMessageId()).thenReturn(messageId);
+        return mockMessageAck;
+    }
+
     @Test
     public void send() throws Exception {
         ProducerBrokerExchange mockedProducerBrokerExchange = mock(ProducerBrokerExchange.class);
@@ -105,5 +111,60 @@ public class IsolationBrokerTest {
 
         // This should NOT throw an exceptions
         this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage2);
+    }
+
+    @Test
+    // Test flow:
+    // Step 1: Message 1 will get the lock
+    // Step 2: Message 2 will fail but be placed on the queue
+    // Step 3: Message 1 will release the lock, allowing it to be picked up by the next lock on the queue
+    // Step 4: Message 3 will fail because, whilst the lock is free, the virtual queue gives preferences to Message 2
+    // Step 5: Message 2 will get the lock as it is first on the queue
+    // Step 6: Message 2 will release the lock
+    // Step 7: Message 3 will get the lock as it is not held and there is nothing infront of it in the virtual queue
+    public void EnsureVirtualQueueWorks() throws Exception {
+        // Declarations
+        ProducerBrokerExchange mockedProducerBrokerExchange = mock(ProducerBrokerExchange.class);
+        ConsumerBrokerExchange mockedConsumerBrokerExchange = mock(ConsumerBrokerExchange.class);
+
+        Message mockMessage1 = generateMockMessage();
+        MessageAck mockMessageAck1 = generateMockMessageAck(mockMessage1.getMessageId());
+        Message mockMessage2 = generateMockMessage();
+        MessageAck mockMessageAck2 = generateMockMessageAck(mockMessage2.getMessageId());
+        Message mockMessage3 = generateMockMessage();
+        MessageAck mockMessageAck3 = generateMockMessageAck(mockMessage3.getMessageId());
+
+        // Step 1
+        this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage1);
+
+        // Step 2
+        boolean caughtException1 = false;
+        try {
+            this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage2);
+        } catch (NoLockException e) {
+            caughtException1 = true;
+        }
+        assert(caughtException1 == true);
+
+        // Step 3
+        this.isolationBroker.processAcknowledge(mockedConsumerBrokerExchange, mockMessageAck1);
+
+        // Step 4
+        boolean caughtException2 = false;
+        try {
+            this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage3);
+        } catch (NoLockException e) {
+            caughtException2 = true;
+        }
+        assert(caughtException2 == true);
+
+        // Step 5
+        this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage2);
+
+        // Step 6
+        this.isolationBroker.processAcknowledge(mockedConsumerBrokerExchange, mockMessageAck2);
+
+        // Step 7
+        this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage3);
     }
 }
