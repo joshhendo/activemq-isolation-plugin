@@ -1,7 +1,6 @@
 package org.apache.activemq.isolation.lock;
 
 import java.util.Date;
-import java.util.HashSet;
 
 public class Lock {
     private String lockId;
