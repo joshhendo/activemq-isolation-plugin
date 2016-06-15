@@ -7,6 +7,7 @@ import org.apache.activemq.command.MessageAck;
 import org.apache.activemq.command.MessageId;
 import org.apache.activemq.isolation.IsolationBroker;
 
+import org.apache.activemq.isolation.exceptions.NoKeyException;
 import org.apache.activemq.isolation.exceptions.NoLockException;
 import org.apache.activemq.isolation.lock.LockProvider;
 import org.apache.activemq.util.ByteSequence;
@@ -37,10 +38,10 @@ public class IsolationBrokerTest {
 
     }
 
-    private Message generateMockMessage() {
+    private Message generateMockMessage(String content) {
         String messageIdString = java.util.UUID.randomUUID().toString();
         String correlationIdString = java.util.UUID.randomUUID().toString();
-        String messageContent = "{\"message\": \"addUser\", \"userid\": \"12345678\"}";
+        String messageContent = content;
         byte[] messageContentBytes = messageContent.getBytes(US_ASCII);
 
         MessageId mockedMessageId = new MessageId(messageIdString);
@@ -51,6 +52,10 @@ public class IsolationBrokerTest {
         when(mockedMessage.getContent()).thenReturn(new ByteSequence(messageContentBytes));
 
         return mockedMessage;
+    }
+
+    private Message generateMockMessage() {
+        return generateMockMessage("{\"message\": \"addUser\", \"userid\": \"12345678\"}");
     }
 
     private MessageAck generateMockMessageAck(MessageId messageId) {
@@ -166,5 +171,17 @@ public class IsolationBrokerTest {
 
         // Step 7
         this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage3);
+    }
+
+    @Test
+    public void EnsureThrowExceptionIfMessageDoesntContainKey() throws Exception {
+        // Declarations
+        ProducerBrokerExchange mockedProducerBrokerExchange = mock(ProducerBrokerExchange.class);
+
+        // Missing the key 'userid'
+        Message mockMessage1 = generateMockMessage("{\"message\": \"addUser\"}");
+
+        exception.expect(NoKeyException.class);
+        this.isolationBroker.processMessage(mockedProducerBrokerExchange, mockMessage1);
     }
 }

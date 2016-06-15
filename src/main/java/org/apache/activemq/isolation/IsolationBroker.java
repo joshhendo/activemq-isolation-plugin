@@ -6,6 +6,7 @@ import org.apache.activemq.broker.ConsumerBrokerExchange;
 import org.apache.activemq.broker.ProducerBrokerExchange;
 import org.apache.activemq.command.Message;
 import org.apache.activemq.command.MessageAck;
+import org.apache.activemq.isolation.exceptions.NoKeyException;
 import org.apache.activemq.isolation.exceptions.NoLockException;
 import org.apache.activemq.isolation.interfaces.ILockProvider;
 import org.apache.activemq.isolation.schema.SchemaFile;
@@ -45,7 +46,7 @@ public class IsolationBroker extends BrokerFilter {
 		super.send(producerExchange, messageSend);
 	}
 
-	public void processMessage(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException {
+	public void processMessage(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException, NoKeyException {
 		String messageId = messageSend.getMessageId().toString();
 		String correlationId = messageSend.getCorrelationId();
 
@@ -67,6 +68,10 @@ public class IsolationBroker extends BrokerFilter {
 		// TODO: Extract the relevant keys that need to be locked on (if needed)
 		HashMap<String, String> keys = new HashMap<String, String>();
 		for (String requiredKey : requiredKeys) {
+			if (!jsonObject.has(requiredKey)) {
+				throw new NoKeyException();
+			}
+
 			String keyValue = jsonObject.getString(requiredKey);
 			keys.put(requiredKey, keyValue);
 		}
