@@ -4,24 +4,24 @@
     {
       "type": "AddUser",
       "keys": [
-        "username"
+        "userid"
       ],
       "locks": [
         {
           "type": "horizontal",
-          "key": "username"
+          "key": "userid"
         }
       ]
     },
     {
       "type": "UpdateUser",
       "keys": [
-        "username"
+        "userid"
       ],
       "locks": [
         {
           "type": "combination",
-          "key": "username"
+          "key": "userid"
         }
       ]
     }

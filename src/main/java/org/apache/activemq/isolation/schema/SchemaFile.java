@@ -20,5 +20,16 @@ public class SchemaFile {
         return schemaFile;
     }
 
+    public String[] GetRequiredKeys(String messageType) {
+        for (Message message : definitions) {
+            if (message.type.toLowerCase().equals(messageType.toLowerCase())) {
+                return message.keys;
+            }
+        }
+
+        return null;
+    }
+
     public Message[] definitions;
+
 }

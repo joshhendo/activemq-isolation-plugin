@@ -58,9 +58,11 @@ public class IsolationBroker extends BrokerFilter {
 		JSONObject jsonObject = new JSONObject(content);
 		String messageName = jsonObject.getString("message");
 
-		// TODO: Determine what keys to extract from this particular message
-		List<String> requiredKeys = new ArrayList<String>();
-		requiredKeys.add("userid");
+		// Read in the required keys from the definition file
+		String[] requiredKeys = this.definitions.GetRequiredKeys(messageName);
+		if (requiredKeys == null || requiredKeys.length == 0) {
+			return;
+		}
 
 		// TODO: Extract the relevant keys that need to be locked on (if needed)
 		HashMap<String, String> keys = new HashMap<String, String>();
