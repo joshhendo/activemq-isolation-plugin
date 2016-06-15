@@ -69,7 +69,7 @@ public class IsolationBroker extends BrokerFilter {
 		HashMap<String, String> keys = new HashMap<String, String>();
 		for (String requiredKey : requiredKeys) {
 			if (!jsonObject.has(requiredKey)) {
-				throw new NoKeyException();
+				throw new NoKeyException("Missing key '" + requiredKey + "'");
 			}
 
 			String keyValue = jsonObject.getString(requiredKey);
