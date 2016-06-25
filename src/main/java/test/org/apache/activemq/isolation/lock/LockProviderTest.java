@@ -19,15 +19,4 @@ public class LockProviderTest {
     public void tearDown() throws Exception {
 
     }
-
-    @Test
-    public void obtainLocks() throws Exception {
-        //this.lockProvider.obtainLocks();
-    }
-
-    @Test
-    public void releaseLock() throws Exception {
-
-    }
-
 }

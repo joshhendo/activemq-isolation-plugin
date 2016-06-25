@@ -3,16 +3,55 @@ package org.apache.activemq.isolation.lock;
 import org.apache.activemq.isolation.interfaces.ILockProvider;
 
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
 public class LockProvider implements ILockProvider {
 
-    private ConcurrentHashMap<String, String> messageIdToCorrelationId;
-    private ConcurrentHashMap<String, CorrelationIdLocks> correlationIdToLocks;
-    private ConcurrentHashMap<String, Lock> locks;
-    private ConcurrentLinkedQueue<VirtualQueueEntry> virtualQueue;
+    public ConcurrentMap<String, String> messageIdToCorrelationId;
+    public ConcurrentMap<String, CorrelationIdLocks> correlationIdToLocks;
+    public ConcurrentMap<String, Lock> locks;
+    public ConcurrentLinkedQueue<VirtualQueueEntry> virtualQueue;
+
+    // Functions to override
+    protected String getMessageIdToCorrelationId(String messageId) {
+        return this.messageIdToCorrelationId.get(messageId);
+    }
+
+    protected void removeMessageIdToCorrelationId (String messageId) {
+        this.messageIdToCorrelationId.remove(messageId);
+    }
+
+    protected CorrelationIdLocks getCorrelationIdToLocks(String correlationId) {
+        return this.correlationIdToLocks.get(correlationId);
+    }
+
+    protected void setCorrelationIdToLocks(String correlationId, CorrelationIdLocks correlationIdLockEntry) {
+        this.correlationIdToLocks.put(correlationId, correlationIdLockEntry);
+    }
+
+    protected void removeCorrelationIdToLocks(CorrelationIdLocks correlationIdLocksEntry) {
+        this.correlationIdToLocks.remove(correlationIdLocksEntry);
+    }
+
+    protected Boolean existsLock(String lockId){
+        return this.locks.containsKey(lockId);
+    }
+
+    protected Lock getLock(String lockId) {
+        return this.locks.get(lockId);
+    }
+
+    protected void setLock(String lockId, Lock lock) {
+        this.locks.put(lockId, lock);
+    }
+
+    protected void removeLock(String lockId) {
+        this.locks.remove(lockId);
+    }
+
+    // End of things to override
 
     public LockProvider() throws Exception {
         this.messageIdToCorrelationId = new ConcurrentHashMap<String, String>();
@@ -32,10 +71,10 @@ public class LockProvider implements ILockProvider {
         messageIdToCorrelationId.put(messageId, correlationId);
 
         // Get existing locks for correlation ID
-        CorrelationIdLocks correlationIdLockEntry = this.correlationIdToLocks.get(correlationId);
+        CorrelationIdLocks correlationIdLockEntry = getCorrelationIdToLocks(correlationId);
         if (correlationIdLockEntry == null) {
             correlationIdLockEntry = new CorrelationIdLocks(correlationId);
-            this.correlationIdToLocks.put(correlationId, correlationIdLockEntry);
+            setCorrelationIdToLocks(correlationId, correlationIdLockEntry);
         }
 
         Set<Lock> obtainedLocks = new HashSet<Lock>();
@@ -85,14 +124,14 @@ public class LockProvider implements ILockProvider {
             return false;
         }
 
-        CorrelationIdLocks correlationIdLockEntry = correlationIdToLocks.get(correlationId);
+        CorrelationIdLocks correlationIdLockEntry = getCorrelationIdToLocks(correlationId);
         if (correlationIdLockEntry == null) {
             // TODO: Throw exceptions
             return false;
         }
 
         correlationIdLockEntry.acknoweldgeMessage(messageId);
-        this.messageIdToCorrelationId.remove(messageId);
+        removeMessageIdToCorrelationId(messageId);
 
         if (correlationIdLockEntry.areLocksReleased()) {
             releaseLocksForCorrelationId(correlationIdLockEntry);
@@ -106,7 +145,7 @@ public class LockProvider implements ILockProvider {
         String lockId = messageType + ":" + keyName + ":" + keyValue;
 
         // Ensure that this lock isn't already held by another process
-        if (!this.locks.containsKey(lockId)) {
+        if (!existsLock(lockId)) {
             // Ensure that this lock isn't in a virtual queue
             // TODO: Add a timeout for virtual queue entries
             VirtualQueueEntry lastVirtualQueueEntry = findLastMessageInVirtualQueue(messageType, keyName, keyValue);
@@ -123,13 +162,14 @@ public class LockProvider implements ILockProvider {
             Lock newLock = new Lock(lockId);
 
             // Attempt to obtain the lock
-            locks.put(lockId, newLock);
+            setLock(lockId, newLock);
 
             // Optimistic concurrency, check that it wasn't another process
             // that added the lock
-            if (locks.get(lockId) == newLock) {
+            // TODO: Change to using GUIDS; this check won't work for distributed providers like Redis
+            /*if (getLock(lockId) == newLock) {
                 return newLock;
-            }
+            }*/
         }
 
         return null;
@@ -140,11 +180,11 @@ public class LockProvider implements ILockProvider {
 
         // Free all locks
         for (Lock lock : correlationIdLockEntry.getLocks()) {
-            this.locks.remove(lock.getLockId());
+            removeLock(lock.getLockId());
         }
 
         // Remove correlation Id entry
-        this.correlationIdToLocks.remove(correlationIdLockEntry);
+        removeCorrelationIdToLocks(correlationIdLockEntry);
     }
 
     // This function is for proof of concept implementation only.
