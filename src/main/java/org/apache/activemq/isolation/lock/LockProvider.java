@@ -23,6 +23,10 @@ public class LockProvider implements ILockProvider {
         this.messageIdToCorrelationId.remove(messageId);
     }
 
+    protected void addMessageIdToCorrelationId (String messageId, String correlationId) {
+        this.messageIdToCorrelationId.put(messageId, correlationId);
+    }
+
     protected CorrelationIdLocks getCorrelationIdToLocks(String correlationId) {
         return this.correlationIdToLocks.get(correlationId);
     }
@@ -31,7 +35,7 @@ public class LockProvider implements ILockProvider {
         this.correlationIdToLocks.put(correlationId, correlationIdLockEntry);
     }
 
-    protected void removeCorrelationIdToLocks(CorrelationIdLocks correlationIdLocksEntry) {
+    protected void removeCorrelationIdToLocks(String correlationId, CorrelationIdLocks correlationIdLocksEntry) {
         this.correlationIdToLocks.remove(correlationIdLocksEntry);
     }
 
@@ -68,7 +72,7 @@ public class LockProvider implements ILockProvider {
         }
 
         // Map message to correlation ID
-        messageIdToCorrelationId.put(messageId, correlationId);
+        addMessageIdToCorrelationId(messageId, correlationId);
 
         // Get existing locks for correlation ID
         CorrelationIdLocks correlationIdLockEntry = getCorrelationIdToLocks(correlationId);
@@ -105,7 +109,7 @@ public class LockProvider implements ILockProvider {
         // If unsuccessful, we need to release all the ones that were newly obtained
         if (!success) {
             for (Lock lock : obtainedLocks) {
-                this.locks.remove(lock.getLockId());
+                removeLock(lock.getLockId());
                 correlationIdLockEntry.removeLock(lock);
             }
 
@@ -117,7 +121,7 @@ public class LockProvider implements ILockProvider {
     }
 
     public synchronized boolean releaseLocksForMessage(String messageId) {
-        String correlationId = messageIdToCorrelationId.get(messageId);
+        String correlationId = getMessageIdToCorrelationId(messageId);
 
         if (correlationId == null) {
             // TODO: Throw excepton
@@ -134,7 +138,7 @@ public class LockProvider implements ILockProvider {
         removeMessageIdToCorrelationId(messageId);
 
         if (correlationIdLockEntry.areLocksReleased()) {
-            releaseLocksForCorrelationId(correlationIdLockEntry);
+            releaseLocksForCorrelationId(correlationId, correlationIdLockEntry);
         }
 
         return true;
@@ -164,18 +168,19 @@ public class LockProvider implements ILockProvider {
             // Attempt to obtain the lock
             setLock(lockId, newLock);
 
+            Lock gotLock = getLock(lockId);
+
             // Optimistic concurrency, check that it wasn't another process
             // that added the lock
-            // TODO: Change to using GUIDS; this check won't work for distributed providers like Redis
-            /*if (getLock(lockId) == newLock) {
+            if (gotLock != null && gotLock.getGuid().equals(newLock.getGuid())) {
                 return newLock;
-            }*/
+            }
         }
 
         return null;
     }
 
-    private synchronized void releaseLocksForCorrelationId(CorrelationIdLocks correlationIdLockEntry) {
+    private synchronized void releaseLocksForCorrelationId(String correlationId, CorrelationIdLocks correlationIdLockEntry) {
         assert(correlationIdLockEntry != null);
 
         // Free all locks
@@ -184,7 +189,7 @@ public class LockProvider implements ILockProvider {
         }
 
         // Remove correlation Id entry
-        removeCorrelationIdToLocks(correlationIdLockEntry);
+        removeCorrelationIdToLocks(correlationId, correlationIdLockEntry);
     }
 
     // This function is for proof of concept implementation only.
