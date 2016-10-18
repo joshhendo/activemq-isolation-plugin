@@ -56,7 +56,7 @@ public class CorrelationIdLocks {
         this.locks.add(lock);
     }
 
-    public synchronized void addMessage(String messageId) {
+    public synchronized void addMessage(String messageId, int count) {
         assert(messageId != null);
 
         if (areLocksReleased()) {
@@ -66,8 +66,10 @@ public class CorrelationIdLocks {
 
         this.used = true;
 
-        this.messages.add(messageId);
-        this.semaphore += 1;
+        for (int i = 0; i < count; i++) {
+            this.messages.add(messageId);
+            this.semaphore += 1;
+        }
     }
 
     public synchronized void acknoweldgeMessage(String messageId) {

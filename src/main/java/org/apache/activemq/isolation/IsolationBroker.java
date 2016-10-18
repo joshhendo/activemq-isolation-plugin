@@ -14,8 +14,14 @@ import org.apache.commons.lang3.builder.RecursiveToStringStyle;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.json.*;
 
+import org.apache.activemq.advisory.AdvisoryBroker;
+import org.apache.activemq.broker.*;
+import org.apache.activemq.broker.region.RegionBroker;
+import org.apache.activemq.command.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
@@ -24,7 +30,10 @@ public class IsolationBroker extends BrokerFilter {
 	ILockProvider lockProvider;
 	SchemaFile definitions;
 
-	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) throws IOException {
+
+	AdvisoryBroker advisoryBroker;
+
+	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) throws Exception {
 		super(next);
 		this.lockProvider = lockProvider;
 		this.definitions = readInDefinitionFile(definitionFile);
@@ -47,9 +56,16 @@ public class IsolationBroker extends BrokerFilter {
 	}
 
 	public void processMessage(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException, NoKeyException {
+		if (this.advisoryBroker == null) {
+			this.advisoryBroker = (AdvisoryBroker) next.getBrokerService().getBroker().getAdaptor(AdvisoryBroker.class);
+		}
 		String messageId = messageSend.getMessageId().toString();
 		String correlationId = messageSend.getCorrelationId();
 
+		int numberOfDestinations = 1;
+		if (messageSend.getDestination() instanceof ActiveMQTopic) {
+			numberOfDestinations = getConsumersForDestination(messageSend.getDestination(), this.advisoryBroker.getAdvisoryConsumers());
+		}
         byte[] data = messageSend.getContent().data;
 		String content = new String(data, 0, data.length, "ASCII").trim();
 		int i = content.indexOf("{");
@@ -78,7 +94,7 @@ public class IsolationBroker extends BrokerFilter {
 
 		// Try and obtain lock
 		System.out.println("Obtaining lock with messageId=" + messageId + " and correlationId=" + correlationId);
-		boolean lockObtained = this.lockProvider.obtainLocksForMessage(messageId, correlationId, messageName, keys);
+		boolean lockObtained = this.lockProvider.obtainLocksForMessage(messageId, correlationId, messageName, keys, numberOfDestinations);
 		if (!lockObtained) {
 			throw new NoLockException();
 		}
@@ -90,4 +106,19 @@ public class IsolationBroker extends BrokerFilter {
 		// System.out.println(ReflectionToStringBuilder.toString(ack, new RecursiveToStringStyle()));
 		this.lockProvider.releaseLocksForMessage(messageId);
 	}
+
+	private int getConsumersForDestination(ActiveMQDestination destination, Collection<ConsumerInfo> consumers) {
+		int count = 0;
+
+		for (ConsumerInfo consumer : consumers) {
+			if (consumer.getDestination() instanceof ActiveMQTopic) {
+				if (consumer.getDestination().getPhysicalName().equals(destination.getPhysicalName())) {
+					count ++;
+				}
+			}
+		}
+
+		return count;
+	}
+
 }
