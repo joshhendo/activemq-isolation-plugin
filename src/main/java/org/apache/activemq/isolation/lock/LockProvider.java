@@ -24,7 +24,7 @@ public class LockProvider implements ILockProvider {
         this.virtualQueue = new ConcurrentLinkedQueue<VirtualQueueEntry>();
     }
 
-    public synchronized boolean obtainLocksForMessage(String messageId, String correlationId, String messageName, HashMap<String, String> keys) {
+    public synchronized boolean obtainLocksForMessage(String messageId, String correlationId, String messageName, HashMap<String, String> keys, int count) {
         assert(messageId != null);
         if (correlationId == null) {
             correlationId = messageId;
@@ -77,7 +77,7 @@ public class LockProvider implements ILockProvider {
             return false;
         }
 
-        correlationIdLockEntry.addMessage(messageId);
+        correlationIdLockEntry.addMessage(messageId, count);
         return true;
     }
 
@@ -96,7 +96,18 @@ public class LockProvider implements ILockProvider {
         }
 
         correlationIdLockEntry.acknoweldgeMessage(messageId);
-        this.messageIdToCorrelationId.remove(messageId);
+
+        boolean areThereOtherInstancesOfTheSameMessage = false;
+        for (String currentMessageId : correlationIdLockEntry.getMessages()) {
+            if (messageId.equals(currentMessageId)) {
+                areThereOtherInstancesOfTheSameMessage = true;
+                break;
+            }
+        }
+
+        if (!areThereOtherInstancesOfTheSameMessage) {
+            this.messageIdToCorrelationId.remove(messageId);
+        }
 
         if (correlationIdLockEntry.areLocksReleased()) {
             releaseLocksForCorrelationId(correlationIdLockEntry);
