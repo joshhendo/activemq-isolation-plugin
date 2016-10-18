@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class LockProvider implements ILockProvider {
 
+    public static boolean VirtualQueueEnabled = false;
+
     private ConcurrentHashMap<String, String> messageIdToCorrelationId;
     private ConcurrentHashMap<String, CorrelationIdLocks> correlationIdToLocks;
     private ConcurrentHashMap<String, Lock> locks;
@@ -51,8 +53,10 @@ public class LockProvider implements ILockProvider {
 
                 // Was unable to obtain lock; add it to the virtual queue
                 if (obtainedLock == null) {
-                    VirtualQueueEntry virtualQueueEntry = new VirtualQueueEntry(messageName, entry.getKey(), entry.getValue(), messageId);
-                    this.virtualQueue.add(virtualQueueEntry);
+                    if (LockProvider.VirtualQueueEnabled) {
+                        VirtualQueueEntry virtualQueueEntry = new VirtualQueueEntry(messageName, entry.getKey(), entry.getValue(), messageId);
+                        this.virtualQueue.add(virtualQueueEntry);
+                    }
 
                     // We will set success to false
                     success = false;
@@ -109,14 +113,17 @@ public class LockProvider implements ILockProvider {
         if (!this.locks.containsKey(lockId)) {
             // Ensure that this lock isn't in a virtual queue
             // TODO: Add a timeout for virtual queue entries
-            VirtualQueueEntry lastVirtualQueueEntry = findLastMessageInVirtualQueue(messageType, keyName, keyValue);
-            if (lastVirtualQueueEntry != null) {
-                // If it isn't for this message ID, then we can't obtain the lock.
-                // If it is for this message ID, then we can remove it from the queue.
-                if (lastVirtualQueueEntry.getMessageId().equals(messageId)) {
-                    this.virtualQueue.remove(lastVirtualQueueEntry);
-                } else {
-                    return null;
+
+            if (LockProvider.VirtualQueueEnabled) {
+                VirtualQueueEntry lastVirtualQueueEntry = findLastMessageInVirtualQueue(messageType, keyName, keyValue);
+                if (lastVirtualQueueEntry != null) {
+                    // If it isn't for this message ID, then we can't obtain the lock.
+                    // If it is for this message ID, then we can remove it from the queue.
+                    if (lastVirtualQueueEntry.getMessageId().equals(messageId)) {
+                        this.virtualQueue.remove(lastVirtualQueueEntry);
+                    } else {
+                        return null;
+                    }
                 }
             }
 
