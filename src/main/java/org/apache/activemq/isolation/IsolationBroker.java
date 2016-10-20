@@ -29,8 +29,6 @@ public class IsolationBroker extends BrokerFilter {
 
 	ILockProvider lockProvider;
 	SchemaFile definitions;
-
-
 	AdvisoryBroker advisoryBroker;
 
 	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) throws Exception {

@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class LockProvider implements ILockProvider {
 
     public static boolean VirtualQueueEnabled = false;
+    public static int TimeoutInSeconds = 5;
 
     private ConcurrentHashMap<String, String> messageIdToCorrelationId;
     private ConcurrentHashMap<String, CorrelationIdLocks> correlationIdToLocks;
@@ -34,10 +35,12 @@ public class LockProvider implements ILockProvider {
         messageIdToCorrelationId.put(messageId, correlationId);
 
         // Get existing locks for correlation ID
+        boolean isNewCorrelationId = false;
         CorrelationIdLocks correlationIdLockEntry = this.correlationIdToLocks.get(correlationId);
         if (correlationIdLockEntry == null) {
             correlationIdLockEntry = new CorrelationIdLocks(correlationId);
             this.correlationIdToLocks.put(correlationId, correlationIdLockEntry);
+            isNewCorrelationId = true;
         }
 
         Set<Lock> obtainedLocks = new HashSet<Lock>();
@@ -56,6 +59,11 @@ public class LockProvider implements ILockProvider {
                     if (LockProvider.VirtualQueueEnabled) {
                         VirtualQueueEntry virtualQueueEntry = new VirtualQueueEntry(messageName, entry.getKey(), entry.getValue(), messageId);
                         this.virtualQueue.add(virtualQueueEntry);
+                    }
+
+                    this.messageIdToCorrelationId.remove(messageId);
+                    if (isNewCorrelationId) {
+                        this.correlationIdToLocks.remove(correlationId);
                     }
 
                     // We will set success to false
@@ -86,6 +94,7 @@ public class LockProvider implements ILockProvider {
 
         if (correlationId == null) {
             // TODO: Throw excepton
+            System.out.println("Couldn't find correlation id for message");
             return false;
         }
 
@@ -119,6 +128,19 @@ public class LockProvider implements ILockProvider {
     // Returns lock object when lock is successfully obtained, otherwise null
     private synchronized Lock obtainLock(String messageType, String keyName, String keyValue, String messageId) {
         String lockId = messageType + ":" + keyName + ":" + keyValue;
+
+        // Check for timeout
+        if (this.locks.containsKey(lockId)) {
+            Lock lock = this.locks.get(lockId);
+
+            // Timeout date
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.SECOND, 0 - LockProvider.TimeoutInSeconds);
+
+            if (lock.getCreatedDate().before(calendar.getTime())) {
+                this.locks.remove(lockId);
+            }
+        }
 
         // Ensure that this lock isn't already held by another process
         if (!this.locks.containsKey(lockId)) {
