@@ -30,7 +30,7 @@ public class IsolationBrokerTest {
 
     @Before
     public void setUp() throws Exception {
-        this.isolationBroker = new IsolationBroker(null, new LockProvider(), "./assets/definition.json");
+        this.isolationBroker = new IsolationBroker(null, new LockProvider(), "./assets/definition.json", "ImmediateFailure");
     }
 
     @After
