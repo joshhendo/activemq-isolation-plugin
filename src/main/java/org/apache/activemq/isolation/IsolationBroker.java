@@ -10,32 +10,38 @@ import org.apache.activemq.isolation.exceptions.NoKeyException;
 import org.apache.activemq.isolation.exceptions.NoLockException;
 import org.apache.activemq.isolation.interfaces.ILockProvider;
 import org.apache.activemq.isolation.schema.SchemaFile;
-import org.apache.commons.lang3.builder.RecursiveToStringStyle;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.activemq.isolation.virtual.RetryQueue;
+import org.apache.activemq.isolation.virtual.RetryMonitorEntry;
 import org.json.*;
 
 import org.apache.activemq.advisory.AdvisoryBroker;
-import org.apache.activemq.broker.*;
-import org.apache.activemq.broker.region.RegionBroker;
 import org.apache.activemq.command.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 
 public class IsolationBroker extends BrokerFilter {
+    public final String ERROR_HANDLING_VIRTUAL = "VirtualQueue";
+    public final String ERROR_HANDLING_IMMEDIATE = "ImmediateFailure";
 
 	ILockProvider lockProvider;
 	SchemaFile definitions;
 	AdvisoryBroker advisoryBroker;
+    Thread virtualQueueMonitorThread;
+    String errorHandling;
 
-	public IsolationBroker(Broker next, ILockProvider lockProvider, String definitionFile) throws Exception {
+	public IsolationBroker(final Broker next, ILockProvider lockProvider, String definitionFile, String errorHandling) throws Exception {
 		super(next);
 		this.lockProvider = lockProvider;
 		this.definitions = readInDefinitionFile(definitionFile);
-	}
+
+        if (!errorHandling.equals(ERROR_HANDLING_VIRTUAL) && !errorHandling.equals(ERROR_HANDLING_IMMEDIATE)) {
+            throw new ExceptionInInitializerError("errorHandling value in config needs to be set to 'VirtualQueue' or 'ImmediateFailure'");
+        }
+
+        this.errorHandling = errorHandling;
+    }
 
 	private SchemaFile readInDefinitionFile(String definitionFile) throws IOException {
 		return SchemaFile.readFile(definitionFile);
@@ -49,14 +55,45 @@ public class IsolationBroker extends BrokerFilter {
 
 	@Override
 	public void send(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException {
-		processMessage(producerExchange, messageSend);
-		super.send(producerExchange, messageSend);
+		try {
+		    processMessage(producerExchange, messageSend);
+
+            // It will only get to here if a lock is obtained
+            // If the lock is not obtained, the catch statement will:
+            //   - Re-throw the exception if set to ImmediateFailure
+            //   - Add to a queue to be retried at a later time if set to VirtualQueue
+            super.send(producerExchange, messageSend);
+        } catch (NoLockException exception) {
+            // if it's immediate failure, throw the exception
+            if (this.errorHandling.equals(ERROR_HANDLING_IMMEDIATE)) {
+                throw exception;
+            }
+            // If it's virtual queue, don't filter down the exception and add to retry queue
+            else if (this.errorHandling.equals(ERROR_HANDLING_VIRTUAL)) {
+                RetryQueue.addToQueue(new RetryMonitorEntry(producerExchange, messageSend));
+            }
+        }
 	}
 
-	public void processMessage(ProducerBrokerExchange producerExchange, Message messageSend) throws Exception, NoLockException, NoKeyException {
+	public void processMessage(final ProducerBrokerExchange producerExchange, final Message messageSend) throws Exception, NoLockException, NoKeyException {
 		if (this.advisoryBroker == null) {
 			this.advisoryBroker = (AdvisoryBroker) next.getBrokerService().getBroker().getAdaptor(AdvisoryBroker.class);
 		}
+
+		if (this.virtualQueueMonitorThread == null) {
+            virtualQueueMonitorThread = new Thread() {
+                public void run() {
+                    try {
+                        RetryQueue.Monitor(next.getBrokerService().getBroker());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+
+            virtualQueueMonitorThread.start();
+        }
+
 		String messageId = messageSend.getMessageId().toString();
 		String correlationId = messageSend.getCorrelationId();
 

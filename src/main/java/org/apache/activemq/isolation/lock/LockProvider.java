@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class LockProvider implements ILockProvider {
 
     public static boolean VirtualQueueEnabled = false;
-    public static int TimeoutInSeconds = 5;
+    public static int TimeoutInSeconds = 20;
 
     private ConcurrentHashMap<String, String> messageIdToCorrelationId;
     private ConcurrentHashMap<String, CorrelationIdLocks> correlationIdToLocks;
@@ -163,11 +163,11 @@ public class LockProvider implements ILockProvider {
             Lock newLock = new Lock(lockId);
 
             // Attempt to obtain the lock
-            locks.put(lockId, newLock);
+            locks.putIfAbsent(lockId, newLock);
 
             // Optimistic concurrency, check that it wasn't another process
             // that added the lock
-            if (locks.get(lockId) == newLock) {
+            if (locks.get(lockId).getGuid().equals(newLock.getGuid())) {
                 return newLock;
             }
         }

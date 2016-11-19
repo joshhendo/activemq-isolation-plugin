@@ -1,4 +1,4 @@
-<beans 
+<beans
   xmlns="http://www.springframework.org/schema/beans"
   xmlns:amq="http://activemq.apache.org/schema/core"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -23,6 +23,10 @@
 			<bean xmlns="http://www.springframework.org/schema/beans" id="isolationPlugin" class="org.apache.activemq.isolation.IsolationPlugin">
 				<property name="definitionFile">
 					<value>./activemq-isolation-plugin/assets/definition.json</value>
+				</property>
+				<property name="errorHandling">
+					<value>VirtualQueue</value>
+					<!--<value>ImediateFailure</value>-->
 				</property>
 			</bean>
 		</plugins>
