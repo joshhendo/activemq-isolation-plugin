@@ -4,18 +4,21 @@ import java.util.List;
 
 import org.apache.activemq.broker.Broker;
 import org.apache.activemq.broker.BrokerPlugin;
+import org.apache.activemq.isolation.interfaces.ILockProvider;
 import org.apache.activemq.isolation.lock.LockProvider;
+import org.apache.activemq.isolation.lock.RedisLockProvider;
 
 public class IsolationPlugin implements BrokerPlugin {
 
-	LockProvider lockProvider;
+	ILockProvider lockProvider;
 	String definitionFile;
 	String errorHandling;
 
 	public Broker installPlugin(Broker broker) throws Exception {
 		System.out.println("Got a definition file of " + definitionFile);
 
-		this.lockProvider = new LockProvider();
+		//this.lockProvider = new LockProvider();
+		this.lockProvider = new RedisLockProvider();
 		return new IsolationBroker(broker, lockProvider, definitionFile, errorHandling);
 	}
 

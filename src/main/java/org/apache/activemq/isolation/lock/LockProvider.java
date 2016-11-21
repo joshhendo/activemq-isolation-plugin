@@ -94,7 +94,7 @@ public class LockProvider implements ILockProvider {
 
         if (correlationId == null) {
             // TODO: Throw excepton
-            System.out.println("Couldn't find correlation id for message");
+            // System.out.println("Couldn't find correlation id for message");
             return false;
         }
 
@@ -168,6 +168,7 @@ public class LockProvider implements ILockProvider {
             // Optimistic concurrency, check that it wasn't another process
             // that added the lock
             if (locks.get(lockId).getGuid().equals(newLock.getGuid())) {
+                System.out.println(System.currentTimeMillis() + " Obtained lock " + lockId + " for messageid " + messageId);
                 return newLock;
             }
         }

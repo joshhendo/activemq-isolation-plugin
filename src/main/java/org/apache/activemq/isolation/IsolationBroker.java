@@ -49,6 +49,7 @@ public class IsolationBroker extends BrokerFilter {
 
 	@Override
 	public void acknowledge(ConsumerBrokerExchange consumerExchange, MessageAck ack) throws Exception {
+
 		processAcknowledge(consumerExchange, ack);
 		super.acknowledge(consumerExchange, ack);
 	}
@@ -128,7 +129,7 @@ public class IsolationBroker extends BrokerFilter {
 		}
 
 		// Try and obtain lock
-		System.out.println("Obtaining lock with messageId=" + messageId + " and correlationId=" + correlationId);
+		//System.out.println("Obtaining lock with messageId=" + messageId + " and correlationId=" + correlationId);
 		boolean lockObtained = this.lockProvider.obtainLocksForMessage(messageId, correlationId, messageName, keys, numberOfDestinations);
 		if (!lockObtained) {
 			throw new NoLockException();
@@ -137,7 +138,7 @@ public class IsolationBroker extends BrokerFilter {
 
 	public void processAcknowledge(ConsumerBrokerExchange consumerExchange, MessageAck ack) throws Exception {
         String messageId = ack.getLastMessageId().toString();
-		System.out.println("Ack message with messageId=" + messageId);
+		System.out.println(Long.toString(System.currentTimeMillis()) + " Ack message with messageId=" + messageId + " and consumerexchange of " + consumerExchange.getConnectionContext().getClientId().toString() + " and acktype of " + ack.getAckType());
 		// System.out.println(ReflectionToStringBuilder.toString(ack, new RecursiveToStringStyle()));
 		this.lockProvider.releaseLocksForMessage(messageId);
 	}

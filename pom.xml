@@ -74,6 +74,11 @@
       <artifactId>log4j</artifactId>
       <version>${log4j-version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.redisson</groupId>
+      <artifactId>redisson</artifactId>
+      <version>3.1.0</version>
+    </dependency>
   </dependencies>
 
   <build>
